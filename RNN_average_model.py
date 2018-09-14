@@ -243,7 +243,7 @@ class RNNModel(AttributionModel):
 
             # Make sure to reshape @preds here.
 
-            self.raw_preds=tf.pack(preds)
+            self.raw_preds=tf.stack(preds)
             preds=tf.reshape(tf.transpose(self.raw_preds, [1, 0, 2]),[-1,Config.max_length,Config.n_classes])
             return preds
 
