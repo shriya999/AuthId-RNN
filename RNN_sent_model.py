@@ -12,7 +12,7 @@ import time
 import os
 import pickle
 
-import file2dict as fdt
+import utils.file2dict as fdt
 import utils.read_minibatch as rmb
 import utils.data_util as data_util
 
@@ -182,7 +182,7 @@ class RNNModel(AttributionModel):
             h = tf.zeros([tf.shape(x)[0], Config.hidden_size])
 
             preds=[tf.matmul(o, self.U) + self.b2 for o in outputs]
-            preds=tf.pack(preds)
+            preds=tf.stack(preds)
             preds=tf.reshape(preds,[-1,Config.max_length,Config.n_classes])
             return preds
 
@@ -226,7 +226,7 @@ class RNNModel(AttributionModel):
 
             # Make sure to reshape @preds here.
 
-            preds=tf.pack(preds)
+            preds=tf.stack(preds)
             preds=tf.reshape(preds,[-1,Config.max_length,Config.n_classes])
             return preds
 
@@ -252,7 +252,7 @@ class RNNModel(AttributionModel):
         #self.pred_label = tf.tile(self.pred_label, [1, config.max_length, 1])
 
 
-        loss = tf.nn.softmax_cross_entropy_with_logits(self.pred_masked, self.labels_placeholder)
+        loss = tf.nn.softmax_cross_entropy_with_logits(logits=self.pred_masked, labels=self.labels_placeholder)
 
         loss = tf.reduce_mean(loss) + config.regularization * ( tf.nn.l2_loss(self.U) )
 
@@ -417,7 +417,7 @@ class RNNModel(AttributionModel):
         handler.setFormatter(logging.Formatter('%(message)s'))
         logging.getLogger().addHandler(handler)
 
-        pkl_file = open('../data/batch_data/bbc/data_sentence.pkl', 'rb')
+        pkl_file = open('/contents/auth_id/data_sentence.pkl', 'rb')
 
         batch_list = pickle.load(pkl_file)
         pkl_file.close()
@@ -494,7 +494,7 @@ class RNNModel(AttributionModel):
 if __name__ == "__main__":
     args = "gru"
     config = Config(args)
-    glove_path = "../data/glove/glove.6B.50d.txt"
+    glove_path = "/contents/glove.6B.50d.txt"
     glove_vector = data_util.load_embeddings(glove_path, config.embed_size)
     model = RNNModel(config, glove_vector.astype(np.float32))
     model.train_model()
