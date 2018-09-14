@@ -12,7 +12,7 @@ import time
 import os
 import pickle
 
-import file2dict as fdt
+import utils.file2dict as fdt
 import utils.read_minibatch as rmb
 import utils.data_util as data_util
 import utils.confusion_matrix as cm
@@ -192,7 +192,7 @@ class RNNModel(AttributionModel):
             h = tf.zeros([tf.shape(x)[0], Config.hidden_size])
 
             preds=[tf.matmul(o, self.U) + self.b2 for o in outputs]
-            preds=tf.pack(preds)
+            preds=tf.stack(preds)
             preds=tf.reshape(tf.transpose(preds, [1, 0, 2]),[-1,Config.max_length,Config.n_classes])
             return preds
 
@@ -236,7 +236,7 @@ class RNNModel(AttributionModel):
 
             # Make sure to reshape @preds here.
 
-            preds=tf.pack(self.raw_preds)
+            preds=tf.stack(self.raw_preds)
             preds=tf.reshape(tf.transpose(preds, [1, 0, 2]),[-1,Config.max_length,Config.n_classes])
             return preds
 
@@ -262,7 +262,7 @@ class RNNModel(AttributionModel):
         #self.pred_label = tf.tile(self.pred_label, [1, config.max_length, 1])
 
 
-        loss = tf.nn.softmax_cross_entropy_with_logits(self.pred_masked, self.labels_placeholder)
+        loss = tf.nn.softmax_cross_entropy_with_logits(logits=self.pred_masked, labels=self.labels_placeholder)
 
         loss = tf.reduce_mean(loss) + config.regularization * ( tf.nn.l2_loss(self.U) )
 
@@ -421,7 +421,7 @@ class RNNModel(AttributionModel):
 
     def process_model_output(self):
         print "SB!"
-        pkl_file = open('../data/batch_data/gutenberg/data_sentence_index.pkl', 'rb')
+        pkl_file = open('/content/auth_id/data_sentence_index.pkl', 'rb')
         batch_list = pickle.load(pkl_file)
         pkl_file.close()
 
@@ -481,7 +481,7 @@ class RNNModel(AttributionModel):
         handler.setFormatter(logging.Formatter('%(message)s'))
         logging.getLogger().addHandler(handler)
 
-        pkl_file = open('../data/batch_data/C50/data_sentence_index.pkl', 'rb')
+        pkl_file = open('/content/auth_id/data_sentence_index.pkl', 'rb')
         batch_list = pickle.load(pkl_file)
         pkl_file.close()
 
