@@ -9,7 +9,7 @@ data util functions goes here
 """
 
 
-DEFAULT_FILE_PATH2 = "../../data/glove/glove.6B.50d.txt"
+DEFAULT_FILE_PATH2 = "/content/glove.6B.50d.txt"
 DEFAULT_DIMENSION = 50
 
 """
