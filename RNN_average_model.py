@@ -601,7 +601,7 @@ class RNNModel(AttributionModel):
 if __name__ == "__main__":
     args = "gru"
     config = Config(args)
-    glove_path = "../data/glove/glove.6B.50d.txt"
+    glove_path = "/content/glove.6B.50d.txt"
     glove_vector = data_util.load_embeddings(glove_path, config.embed_size)
     model = RNNModel(config, glove_vector.astype(np.float32))
     model.train_model()
