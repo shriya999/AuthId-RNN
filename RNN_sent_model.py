@@ -122,11 +122,11 @@ class RNNModel(AttributionModel):
         feed_dict = {}
         if labels_batch.all() != None:
             feed_dict[self.labels_placeholder] = labels_batch
-        if inputs_batch != None:
+        if inputs_batch.all() != None:
             feed_dict[self.input_placeholder] = inputs_batch
-        if dropout != None:
+        if dropout.all() != None:
             feed_dict[self.dropout_placeholder] = dropout
-        if mask_batch != None:
+        if mask_batch.all() != None:
             feed_dict[self.mask_placeholder] = mask_batch
 
         return feed_dict
