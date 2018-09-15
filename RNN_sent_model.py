@@ -120,7 +120,7 @@ class RNNModel(AttributionModel):
         """
 
         feed_dict = {}
-        if labels_batch != None:
+        if labels_batch.all() != None:
             feed_dict[self.labels_placeholder] = labels_batch
         if inputs_batch != None:
             feed_dict[self.input_placeholder] = inputs_batch
