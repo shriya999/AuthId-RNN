@@ -421,7 +421,7 @@ class RNNModel(AttributionModel):
 
     def process_model_output(self):
 
-        pkl_file = open('/content/auth_id/data_sentence_index.pkl', 'rb')
+        pkl_file = open('/content/auth_id/data_sentence_index_test.pkl', 'rb')
         batch_list = pickle.load(pkl_file)
         pkl_file.close()
 
