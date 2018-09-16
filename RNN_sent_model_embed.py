@@ -178,7 +178,7 @@ class RNNModel(AttributionModel):
             hidden_state = tf.zeros([tf.shape(x)[0], Config.hidden_size])
             init_state = tf.nn.rnn_cell.LSTMStateTuple(cell_state, hidden_state)
             cell = tf.nn.rnn_cell.BasicLSTMCell(Config.hidden_size, state_is_tuple=True)
-            inputs_series=tf.split(1,Config.max_length,x)
+            inputs_series=tf.split(x,Config.max_length,1)
             inputs_series=[tf.reshape(one_input,[-1,Config.embed_size]) for one_input in inputs_series ]
             outputs, current_state = tf.nn.rnn(cell, inputs_series, init_state)
 
