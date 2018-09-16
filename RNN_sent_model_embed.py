@@ -479,7 +479,7 @@ class RNNModel(AttributionModel):
         handler.setFormatter(logging.Formatter('%(message)s'))
         logging.getLogger().addHandler(handler)
 
-        pkl_file = open('/content/auth_id/data_sentence.pkl', 'rb')
+        pkl_file = open('/content/auth/data_sentence_index_test.pkl', 'rb')
         batch_list = pickle.load(pkl_file)
         pkl_file.close()
 
@@ -503,8 +503,8 @@ class RNNModel(AttributionModel):
             #the following is a test for what in tensor
             batch = training_batch[0]
             batch_label = rmb.convertOnehotLabel(batch[0],  Config.n_classes)
-            batch_feat = np.array(batch[0], dtype = np.int32)
-            batch_feat_mask = np.array(batch[0], dtype = np.float32)
+            batch_feat = np.array(batch[1], dtype = np.int32)
+            batch_feat_mask = np.array(batch[1], dtype = np.float32)
             batch_mask = np.array(batch[2], dtype = np.float32)
             feed = self.create_feed_dict(batch_feat, batch_feat_mask, labels_batch=batch_label, mask_batch=batch_mask,
                                      dropout=Config.dropout)
