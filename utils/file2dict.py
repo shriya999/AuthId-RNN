@@ -270,9 +270,7 @@ if __name__=='__main__':
     print t1.timeit(1)
     print t2.timeit(1)
     '''
-
-    cwd = os.getcwd()
-    test_path = cwd + '/../dataset/C50/C50train'
+    test_path = '/content/C50/C50train'
 
 
     # auth_sentbundle_num = file2auth_sentbundle_num(test_path, 3)

@@ -11,18 +11,16 @@ import json
 from data_util import load_embeddings
 
 batch_size = 16
+data_path = '/content/C50/C50train'
 
-cwd = os.getcwd()
-data_path = cwd + '/../dataset/C50/C50train'
-
-with open('../../data/glove/tokenToIndex', 'r') as f:
+with open('/content/auth_id/tokenToIndex', 'r') as f:
     try:
         wordToIndex = json.load(f)
     # if the file is empty the ValueError will be thrown
     except ValueError:
         wordToIndex = {}
 
-glove_path = "../../data/glove/glove.6B.50d.txt"
+glove_path = "/content/glove.6B.50d.txt"
 glove_vector = load_embeddings(glove_path, 50)  # load the glove vectors
 
 #auth_sent_num = fdt.file2auth_sent_num(data_path)  # read in the training data
@@ -39,7 +37,7 @@ batch_list = rmb.process_word2num(raw_data, wordToIndex, glove_vector,24)
 
 batch_list_bundle = rmb.pack_batch_list(batch_list, batch_size)
 
-output = open('../../data/batch_data/bbc/data_sentence.pkl', 'wb')
+output = open('/content/auth_id/data_sentence.pkl', 'wb')
 pickle.dump(batch_list_bundle, output, -1)
 output.close()
 
