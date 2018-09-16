@@ -125,13 +125,13 @@ class RNNModel(AttributionModel):
 
         feed_dict = {}
         feed_dict[self.batch_mask_placeholder] = batch_feat_mask
-        if labels_batch != None:
+        if labels_batch is not None:
             feed_dict[self.labels_placeholder] = labels_batch
-        if inputs_batch != None:
+        if inputs_batch is not None:
             feed_dict[self.input_placeholder] = inputs_batch
-        if dropout != None:
+        if dropout is not None:
             feed_dict[self.dropout_placeholder] = dropout
-        if mask_batch != None:
+        if mask_batch is not None:
             feed_dict[self.mask_placeholder] = mask_batch
 
         return feed_dict
