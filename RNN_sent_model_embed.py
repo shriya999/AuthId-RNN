@@ -479,7 +479,7 @@ class RNNModel(AttributionModel):
         handler.setFormatter(logging.Formatter('%(message)s'))
         logging.getLogger().addHandler(handler)
 
-        pkl_file = open('/content/auth/data_sentence_index_test.pkl', 'rb')
+        pkl_file = open('/content/auth_id/data_sentence_index_test.pkl', 'rb')
         batch_list = pickle.load(pkl_file)
         pkl_file.close()
 
