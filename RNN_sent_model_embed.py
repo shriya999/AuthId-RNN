@@ -391,8 +391,8 @@ class RNNModel(AttributionModel):
         real_label_list = []
 
         for batch in batch_list:
-            batch_feat = np.array(batch[1], dtype = np.int32)[:, :, 0, :]
-            batch_feat_mask = np.array(batch[1], dtype = np.float32)[:, :, 1, :]
+            batch_feat = np.array(batch[1], dtype = np.int32)
+            batch_feat_mask = np.array(batch[1], dtype = np.float32)
             batch_mask = np.array(batch[2], dtype = np.float32)
 
             pred = self.predict_on_batch(session, batch_feat, batch_feat_mask, batch_mask)
@@ -408,8 +408,8 @@ class RNNModel(AttributionModel):
         total = 0
         accuCount = 0
         for batch in batch_list:
-            batch_feat = np.array(batch[1], dtype = np.int32)[:, :, 0, :]
-            batch_feat_mask = np.array(batch[1], dtype = np.float32)[:, :, 1, :]
+            batch_feat = np.array(batch[1], dtype = np.int32)
+            batch_feat_mask = np.array(batch[1], dtype = np.float32)
             batch_mask = np.array(batch[2], dtype = np.float32)
 
             pred = self.predict_on_batch(session, batch_feat, batch_feat_mask, batch_mask)
@@ -442,8 +442,8 @@ class RNNModel(AttributionModel):
             pred_list = []
             real_label_list = []
             for batch in testing_batch:
-                batch_feat = np.array(batch[1], dtype = np.int32)[:, :, 0, :]
-                batch_feat_mask = np.array(batch[1], dtype = np.float32)[:, :, 1, :]
+                batch_feat = np.array(batch[1], dtype = np.int32)
+                batch_feat_mask = np.array(batch[1], dtype = np.float32)
                 batch_mask = np.array(batch[2], dtype = np.float32)
 
                 pred = self.predict_on_batch(session, batch_feat, batch_feat_mask, batch_mask)
@@ -503,8 +503,8 @@ class RNNModel(AttributionModel):
             #the following is a test for what in tensor
             batch = training_batch[0]
             batch_label = rmb.convertOnehotLabel(batch[0],  Config.n_classes)
-            batch_feat = np.array(list(batch[1], dtype = np.int32))[:, :, 0, :]
-            batch_feat_mask = np.array(batch[1], dtype = np.float32)[:, :, 1, :]
+            batch_feat = np.array(batch[1], dtype = np.int32)
+            batch_feat_mask = np.array(batch[1], dtype = np.float32)
             batch_mask = np.array(batch[2], dtype = np.float32)
             feed = self.create_feed_dict(batch_feat, batch_feat_mask, labels_batch=batch_label, mask_batch=batch_mask,
                                      dropout=Config.dropout)
@@ -518,8 +518,8 @@ class RNNModel(AttributionModel):
 
                 for batch in training_batch:
                     batch_label = rmb.convertOnehotLabel(batch[0],  Config.n_classes)
-                    batch_feat = np.array(batch[1], dtype = np.int32)[:, :, 0, :]
-                    batch_feat_mask = np.array(batch[1], dtype = np.float32)[:, :, 1, :]
+                    batch_feat = np.array(batch[1], dtype = np.int32)
+                    batch_feat_mask = np.array(batch[1], dtype = np.float32)
                     batch_mask = np.array(batch[2], dtype = np.float32)
                     #print batch_mask
                     loss = self.train_on_batch(session, batch_feat,batch_feat_mask, batch_label, batch_mask)
