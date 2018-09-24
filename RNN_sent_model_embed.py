@@ -31,15 +31,10 @@ logger = logging.getLogger("RNN_Author_Attribution")
 logger.setLevel(logging.DEBUG)
 logging.basicConfig(format='%(message)s', level=logging.DEBUG)
 
+tf.reset_default_graph()  #used so that variables gets reinitialized every time
+
 class Config:
-    """Holds model hyperparams and data information.
-
-    The config class is used to store various hyperparameters and dataset
-    information parameters. Model objects are passed a Config() object at
-    instantiation.
-    """
-
-    cell_type="lstm" # either rnn, gru or lstm
+    cell_type="gru" # either rnn, gru or lstm
 
     window_size = 0
 
@@ -53,7 +48,7 @@ class Config:
     hidden_size = 300
     batch_size = 16
 
-    n_epochs = 25
+    n_epochs = 5
     regularization = 0
 
     max_grad_norm = 10.0 # max gradients norm for clipping
@@ -77,26 +72,7 @@ class Config:
         self.log_output = self.output_path + "log"
 
 class RNNModel(AttributionModel):
-    """
-    Implements a recurrent neural network with an embedding layer and
-    single hidden layer.
-    """
-
     def add_placeholders(self):
-        """Generates placeholder variables to represent the input tensors
-
-        These placeholders are used as inputs by the rest of the model building and will be fed
-        data during training.  Note that when "None" is in a placeholder's shape, it's flexible
-        (so we can use different batch sizes without rebuilding the model).
-
-        Adds following nodes to the computational graph
-
-        input_placeholder: Input placeholder tensor of  shape (None, self.max_length, n_features), type tf.int32
-        labels_placeholder: Labels placeholder tensor of shape (None, self.max_length), type tf.int32
-        mask_placeholder:  Mask placeholder tensor of shape (None, self.max_length), type tf.bool
-        dropout_placeholder: Dropout value placeholder (scalar), type tf.float32
-
-        """
         self.input_placeholder = tf.placeholder(tf.int32, [None, Config.max_length, Config.word_num])
         self.batch_mask_placeholder = tf.placeholder(tf.float32, [None, Config.max_length, Config.word_num])
         self.labels_placeholder = tf.placeholder(tf.int32, [None, Config.n_classes])
@@ -104,25 +80,6 @@ class RNNModel(AttributionModel):
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
     def create_feed_dict(self, inputs_batch, batch_feat_mask, mask_batch, labels_batch=None, dropout=1):
-        """Creates the feed_dict for the dependency parser.
-
-        A feed_dict takes the form of:
-
-        feed_dict = {
-                <placeholder>: <tensor of values to be passed for placeholder>,
-                ....
-        }
-
-
-        Args:
-            inputs_batch: A batch of input data.
-            mask_batch:   A batch of mask data.
-            labels_batch: A batch of label data.
-            dropout: The dropout rate.
-        Returns:
-            feed_dict: The feed dictionary mapping from placeholders to values.
-        """
-
         feed_dict = {}
         feed_dict[self.batch_mask_placeholder] = batch_feat_mask
         if labels_batch is not None:
@@ -137,13 +94,6 @@ class RNNModel(AttributionModel):
         return feed_dict
 
     def add_embedding(self):
-        """Adds an embedding layer that maps from input tokens (integers) to vectors and then
-        concatenates those vectors:
-
-        Returns:
-            embeddings: tf.Tensor of shape (None, n_features*embed_size)
-        """
-
         embeddingTensor = tf.Variable(self.pretrained_embeddings, tf.float32)
         embeddingsTemp = tf.nn.embedding_lookup(embeddingTensor, self.input_placeholder)
         mask_batch = tf.reshape(self.batch_mask_placeholder, [-1, config.max_length, config.word_num, 1])
@@ -154,22 +104,6 @@ class RNNModel(AttributionModel):
         return embeddings
 
     def add_prediction_op(self):
-        """Adds the unrolled RNN:
-            h_0 = 0
-            for t in 1 to T:
-                o_t, h_t = cell(x_t, h_{t-1})
-                o_drop_t = Dropout(o_t, dropout_rate)
-                y_t = o_drop_t U + b_2
-
-        Remember:
-            * Use the xavier initilization for matrices.
-            * Note that tf.nn.dropout takes the keep probability (1 - p_drop) as an argument.
-            The keep probability should be set to the value of self.dropout_placeholder
-
-        Returns:
-            pred: tf.Tensor of shape (batch_size, max_length, n_classes)
-        """
-
         x = self.add_embedding()
         #x = self.input_placeholder
         if Config.cell_type=="lstm":
@@ -181,7 +115,6 @@ class RNNModel(AttributionModel):
             inputs_series=tf.split(x,Config.max_length,1)
             inputs_series=[tf.reshape(one_input,[-1,Config.embed_size]) for one_input in inputs_series ]
             outputs, current_state = tf.nn.static_rnn(cell, inputs_series, init_state)
-
 
             self.U = tf.get_variable('U',
                                   [Config.hidden_size, Config.n_classes],
@@ -202,19 +135,13 @@ class RNNModel(AttributionModel):
 
             self.raw_preds = [] # Predicted output at each timestep should go here!
 
-
-            # Use the cell defined below. For Q2, we will just be using the
-            # RNNCell you defined, but for Q3, we will run this code again
-            # with a GRU cell!
             if Config.cell_type=="rnn":
                 cell = RNNCell(Config.embed_size, Config.hidden_size)
             elif Config.cell_type=="gru":
                 cell = GRUCell(Config.embed_size, Config.hidden_size)
             else:
                 assert False, "Cell type undefined"
-            # Define U and b2 as variables.
-            # Initialize state as vector of zeros.
-
+          
             self.U = tf.get_variable('U',
                                   [Config.hidden_size, Config.n_classes],
                                   initializer = tf.contrib.layers.xavier_initializer())
@@ -233,34 +160,17 @@ class RNNModel(AttributionModel):
                     o_drop = tf.nn.dropout(o, dropout_rate)
                     self.raw_preds.append(tf.matmul(o_drop, self.U) + self.b2)
 
-
-            # Make sure to reshape @preds here.
-
             preds=tf.stack(self.raw_preds)
             preds=tf.reshape(tf.transpose(preds, [1, 0, 2]),[-1,Config.max_length,Config.n_classes])
             return preds
-
-
+          
     def add_loss_op(self, preds):
-        """Adds Ops for the loss function to the computational graph.
-
-        Args:
-            pred: A tensor of shape (batch_size, max_length, n_classes) containing the output of the neural
-                  network before the softmax layer.
-        Returns:
-            loss: A 0-d tensor (scalar)
-        """
-
-
+        
         self.pred_mask=tf.reshape(self.mask_placeholder,[-1,Config.max_length,1])
         self.pred_mask=tf.tile(self.pred_mask,[1,1,Config.n_classes])
 
         self.pred_masked=tf.multiply(preds,self.pred_mask)
         self.pred_masked=tf.reduce_sum(self.pred_masked,axis=1)
-
-        #self.pred_label = tf.reshape(self.labels_placeholder, [-1, 1, config.n_classes])
-        #self.pred_label = tf.tile(self.pred_label, [1, config.max_length, 1])
-
 
         loss = tf.nn.softmax_cross_entropy_with_logits(logits=self.pred_masked, labels=self.labels_placeholder)
 
@@ -279,29 +189,8 @@ class RNNModel(AttributionModel):
         return loss
 
     def add_training_op(self, loss):
-        """Sets up the training Ops.
-
-        Creates an optimizer and applies the gradients to all trainable variables.
-        The Op returned by this function is what must be passed to the
-        `sess.run()` call to cause the model to train. See
-
-        https://www.tensorflow.org/versions/r0.7/api_docs/python/train.html#Optimizer
-
-        for more information.
-
-        Use tf.train.AdamOptimizer for this model.
-        Calling optimizer.minimize() will return a train_op object.
-
-        Args:
-            loss: Loss tensor, from cross_entropy_loss.
-        Returns:
-            train_op: The Op for training.
-        """
-
         train_op = tf.train.AdamOptimizer(Config.lr).minimize(loss)
-
         return train_op
-
 
     def train_on_batch(self, sess, inputs_batch, batch_feat_mask, labels_batch, mask_batch):
 
@@ -312,45 +201,13 @@ class RNNModel(AttributionModel):
         return loss
 
     def predict_on_batch(self, sess, inputs_batch, batch_feat_mask, mask_batch):
-        """Make predictions for the provided batch of data
-
-        Args:
-            sess: tf.Session()
-            input_batch: np.ndarray of shape (n_samples, max_length)
-            mask_batch: np.ndarray of shape (n_samples, max_length)
-        Returns:
-            predictions: np.ndarray of shape (n_samples, n_classes)
-            (after softmax)
-        """
+       
         feed = self.create_feed_dict(inputs_batch, batch_feat_mask, mask_batch)
         predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
         mask2=np.stack([mask_batch for i in range(Config.n_classes)] ,2)
         pred2=np.sum(np.multiply(predictions,mask2),1)
         return pred2
 
-
-        """
-        record the history of the model
-        this function will append the following content to the file (opened as f):
-
-        ###
-        training model:
-        starting time:
-
-        parameters：
-            cell_type:
-            embed_size:
-            hidden_size:
-            learning_rate:
-            regularization:
-            batch_size:
-
-        training history:
-        epoch       loss     train_accu      test_accu
-        0           1.2      0.6             0.4
-        ...
-
-        """
     def record_history_init(self,f):
         f.write("###\n")
         f.write("training_model: "+sys.argv[0]+"\n")
@@ -367,17 +224,9 @@ class RNNModel(AttributionModel):
         f.write("training history:\n")
         f.write("epoch \t\t loss \t\t train_accu \t\t test_accu\n")
 
-
-        """
-        write one line of training history
-        """
     def record_history_accu(self,f,n_epoch,average_train_loss,train_accu,test_accu):
         f.write("{0:d} \t\t {1:.5f} \t\t {2:.5f} \t\t {3:.5f}\n".format(n_epoch,average_train_loss,train_accu,test_accu))
 
-
-        """
-        add two empty lines and close the file
-        """
     def record_history_finish(self,f):
         f.write("END\n")
         f.write("\n")
@@ -430,11 +279,12 @@ class RNNModel(AttributionModel):
         print test_size, len(batch_list)
         testing_batch = batch_list[len(batch_list) - test_size : len(batch_list)]
 
+        init = tf.global_variables_initializer()
         saver = tf.train.Saver()
         with tf.Session() as session:
-            #session.run(init)
-            load_path = "results/RNN/20170318_221625/model.weights_10"
-            saver.restore(session, load_path)
+            session.run(init)
+            #load_path = "results/RNN/20170318_221625/model.weights_10"
+            #saver.restore(session, load_path)
 
             print "Now, collecting the model outputs..."
             total = 0
@@ -460,9 +310,6 @@ class RNNModel(AttributionModel):
             du.visualize_cm(x, "gutenberg_sentence")
             return accu
 
-
-
-
     def train_model(self):
         # modify txt name from here
         level='' # 'word' or ''
@@ -484,7 +331,9 @@ class RNNModel(AttributionModel):
         pkl_file.close()
 
         # write training_history
+        print training_history_txt_filename
         training_history_file = open(training_history_txt_filename,'a+')
+        print training_history_file
         self.record_history_init(training_history_file)
 
         test_size = int(len(batch_list) / 10)
@@ -566,7 +415,7 @@ class RNNModel(AttributionModel):
 
 
 if __name__ == "__main__":
-    args = "lstm"
+    args = "gru"
     config = Config(args)
     glove_path = "/content/glove.6B.50d.txt"
     glove_vector = data_util.load_embeddings(glove_path, config.embed_size)
