@@ -14,7 +14,7 @@ batch_size = 16
 max_sent_num = 15
 max_sent_length = 30
 
-data_path = cwd + '/content/gutenberg'
+data_path = '/content/gutenberg'
 
 with open('/content/auth_id/tokenToIndex', 'r') as f:
     try:
