@@ -115,8 +115,7 @@ def file2pair(input_path, n_class = 50, para_len = 300, self_ratio = 0.2, sample
 
 
 if __name__=='__main__':
-    cwd = os.getcwd()
-    test_path = cwd + '/../dataset/gutenberg'
+    test_path = '/content/gutenberg'
 
     res = file2list(test_path)
     print len(res)
