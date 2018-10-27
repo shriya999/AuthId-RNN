@@ -15,9 +15,9 @@ max_sent_num = 3
 max_length = 70
 
 cwd = os.getcwd()
-data_path = cwd + '/../dataset/C50/C50test'
+data_path = cwd + '/content/C50/C50test'
 
-with open('../../data/glove/tokenToIndex', 'r') as f:
+with open('/content/tokenToIndex', 'r') as f:
     try:
         wordToIndex = json.load(f)
     # if the file is empty the ValueError will be thrown
@@ -38,7 +38,7 @@ raw_data = [auth_news_num[i] for i in index ]
 batch_list = rmb.parse_article_sentbundle(raw_data, wordToIndex, max_sent_num, max_length)
 
 
-output = open('../../data/batch_data/C50/data_article_test.pkl', 'wb')
+output = open('/content/auth_id/data_article_test.pkl', 'wb')
 pickle.dump(batch_list, output, -1)
 output.close()
 
