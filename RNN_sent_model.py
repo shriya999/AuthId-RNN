@@ -1,3 +1,5 @@
+#RNN_sent_model.py
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -14,6 +16,7 @@ import pickle
 
 import utils.file2dict as fdt
 import utils.read_minibatch as rmb
+import utils.confusion_matrix as cm
 import utils.data_util as data_util
 
 from datetime import datetime
@@ -28,6 +31,8 @@ from proj_gru_cell import GRUCell
 logger = logging.getLogger("RNN_Author_Attribution")
 logger.setLevel(logging.DEBUG)
 logging.basicConfig(format='%(message)s', level=logging.DEBUG)
+
+tf.reset_default_graph()  #used so that variables gets reinitialized every time
 
 class Config:
     """Holds model hyperparams and data information.
@@ -50,7 +55,7 @@ class Config:
     hidden_size = 100
     batch_size = 16
 
-    n_epochs = 41
+    n_epochs = 35
     regularization = 0
 
     max_grad_norm = 10.0 # max gradients norm for clipping
@@ -80,55 +85,25 @@ class RNNModel(AttributionModel):
     """
 
     def add_placeholders(self):
-        """Generates placeholder variables to represent the input tensors
+    
 
-        These placeholders are used as inputs by the rest of the model building and will be fed
-        data during training.  Note that when "None" is in a placeholder's shape, it's flexible
-        (so we can use different batch sizes without rebuilding the model).
-
-        Adds following nodes to the computational graph
-
-        input_placeholder: Input placeholder tensor of  shape (None, self.max_length, n_features), type tf.int32
-        labels_placeholder: Labels placeholder tensor of shape (None, self.max_length), type tf.int32
-        mask_placeholder:  Mask placeholder tensor of shape (None, self.max_length), type tf.bool
-        dropout_placeholder: Dropout value placeholder (scalar), type tf.float32
-
-        """
         self.input_placeholder = tf.placeholder(tf.float32, [None, Config.max_length, Config.embed_size])
         self.labels_placeholder = tf.placeholder(tf.int32, [None, Config.n_classes])
         self.mask_placeholder = tf.placeholder(tf.float32, [None, Config.max_length])
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
-    def create_feed_dict(self, inputs_batch, mask_batch, labels_batch=None, dropout=1):
-        """Creates the feed_dict for the dependency parser.
-
-        A feed_dict takes the form of:
-
-        feed_dict = {
-                <placeholder>: <tensor of values to be passed for placeholder>,
-                ....
-        }
-
-
-        Args:
-            inputs_batch: A batch of input data.
-            mask_batch:   A batch of mask data.
-            labels_batch: A batch of label data.
-            dropout: The dropout rate.
-        Returns:
-            feed_dict: The feed dictionary mapping from placeholders to values.
-        """
-
-        feed_dict = {}
-        if labels_batch != None:
+      
+    def create_feed_dict(self, inputs_batch, mask_batch, labels_batch=None, dropout=1): 
+        feed_dict = {}        #default value of dropout given as 1 so that not applied for test data
+        if labels_batch is not None:
             feed_dict[self.labels_placeholder] = labels_batch
-        if inputs_batch.all() != None:
+        if inputs_batch is not None:
             feed_dict[self.input_placeholder] = inputs_batch
-        if dropout != None:
+        if dropout is not None:
             feed_dict[self.dropout_placeholder] = dropout
-        if mask_batch.all() != None:
+        if mask_batch is not None:
             feed_dict[self.mask_placeholder] = mask_batch
-
+            
         return feed_dict
 
     def add_embedding(self):
@@ -401,6 +376,47 @@ class RNNModel(AttributionModel):
         accu = accuCount * 1.0 / total
         logger.info( ("Test accuracy on training set is: %f" %(accu)) )
         return accu
+      
+    def process_model_output(self):
+
+        pkl_file = open('/content/auth_id/data_sentence_test.pkl', 'rb') 
+        batch_list = pickle.load(pkl_file)
+        pkl_file.close()
+
+        test_size = int(len(batch_list) / 10)  #splitting test data in 9:1 ratio
+        training_batch = batch_list[0 : len(batch_list) - test_size]
+        print test_size, len(batch_list)
+        testing_batch = batch_list[len(batch_list) - test_size : len(batch_list)]
+
+        init = tf.global_variables_initializer()
+        saver = tf.train.Saver()
+        with tf.Session() as session:
+            session.run(init)
+            #load_path = "results/RNN/20170318_221625/model.weights_10"
+            #saver.restore(session, load_path)
+
+            print "Now, collecting the model outputs..."
+            total = 0
+            accuCount = 0
+            pred_list = []
+            real_label_list = []
+            for batch in training_batch:
+                #batch_label = rmb.convertOnehotLabel(batch[0],  Config.n_classes)
+                batch_feat = np.array(batch[1], dtype = np.float32)
+                batch_mask = np.array(batch[2], dtype = np.float32)
+                pred = self.predict_on_batch(session, batch_feat, batch_mask)
+                accuCount += np.sum(np.argmax(pred,1) == batch[0])
+                pred_list.extend(np.argmax(pred,1).tolist())
+                real_label_list.extend(batch[0])
+                total += len(batch[0])
+            accu = accuCount * 1.0 / total
+            print( ("Test accuracy %f" %(accu)) )
+
+            t_cm = cm.generate_cm(real_label_list,pred_list, 50)
+            x = t_cm.as_matrix().astype(np.uint8)
+            print x
+            du.visualize_cm(x, "gutenberg_sentence")
+            return accu    
 
     def train_model(self):
         level='word_level'
@@ -417,7 +433,7 @@ class RNNModel(AttributionModel):
         handler.setFormatter(logging.Formatter('%(message)s'))
         logging.getLogger().addHandler(handler)
 
-        pkl_file = open('/content/auth_id/data_sentence.pkl', 'rb')
+        pkl_file = open('/content/auth_id/data_sentence_test.pkl', 'rb')
 
         batch_list = pickle.load(pkl_file)
         pkl_file.close()
@@ -498,3 +514,4 @@ if __name__ == "__main__":
     glove_vector = data_util.load_embeddings(glove_path, config.embed_size)
     model = RNNModel(config, glove_vector.astype(np.float32))
     model.train_model()
+    model.process_model_output()
