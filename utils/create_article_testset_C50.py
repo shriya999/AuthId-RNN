@@ -14,10 +14,9 @@ from data_util import load_embeddings
 max_sent_num = 3
 max_length = 70
 
-cwd = os.getcwd()
-data_path = cwd + '/content/C50/C50test'
+data_path ='/content/C50/C50test'
 
-with open('/content/tokenToIndex', 'r') as f:
+with open('/content/auth_id/tokenToIndex', 'r') as f:
     try:
         wordToIndex = json.load(f)
     # if the file is empty the ValueError will be thrown
