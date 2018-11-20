@@ -1,3 +1,6 @@
+#RNN_sent_model_embed.py  for gru
+
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -34,25 +37,25 @@ logging.basicConfig(format='%(message)s', level=logging.DEBUG)
 tf.reset_default_graph()  #used so that variables gets reinitialized every time
 
 class Config:
-    cell_type="gru" # either rnn, gru or lstm
+    cell_type="lstm" 
 
     window_size = 0
 
     word_num = 30
     max_length = 30 # longest length of a sentence we will process
     n_classes = 50 # in total, we have 50 classes
-    dropout = 0.9
+    dropout = 0.8
 
     embed_size = 50
 
     hidden_size = 300
     batch_size = 16
 
-    n_epochs = 5
-    regularization = 0
+    n_epochs = 30
+    regularization = 0.00001
 
     max_grad_norm = 10.0 # max gradients norm for clipping
-    lr = 0.001 # learning rate
+    lr = 0.004 # learning rate
 
     def __init__(self, args):
 
@@ -79,9 +82,9 @@ class RNNModel(AttributionModel):
         self.mask_placeholder = tf.placeholder(tf.float32, [None, Config.max_length])
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
-    def create_feed_dict(self, inputs_batch, batch_feat_mask, mask_batch, labels_batch=None, dropout=1):
+    def create_feed_dict(self, inputs_batch, batch_feat_mask, mask_batch, labels_batch=None, dropout=1): 
         feed_dict = {}
-        feed_dict[self.batch_mask_placeholder] = batch_feat_mask
+        feed_dict[self.batch_mask_placeholder] = batch_feat_mask        #default value of dropout given as 1 so that not applied for test data
         if labels_batch is not None:
             feed_dict[self.labels_placeholder] = labels_batch
         if inputs_batch is not None:
@@ -187,12 +190,36 @@ class RNNModel(AttributionModel):
                                              + tf.nn.l2_loss(tf.get_variable("W_o"))
                                              + tf.nn.l2_loss(tf.get_variable("U_o")))
         return loss
+          
+    def add_loss_op(self, preds):
+        
+        self.pred_mask=tf.reshape(self.mask_placeholder,[-1,Config.max_length,1])
+        self.pred_mask=tf.tile(self.pred_mask,[1,1,Config.n_classes])
+
+        self.pred_masked=tf.multiply(preds,self.pred_mask)
+        self.pred_masked=tf.reduce_sum(self.pred_masked,axis=1)
+
+        loss = tf.nn.softmax_cross_entropy_with_logits(logits=self.pred_masked, labels=self.labels_placeholder)
+
+        loss = tf.reduce_mean(loss) + config.regularization * ( tf.nn.l2_loss(self.U) )
+
+        with tf.variable_scope("RNN/cell", reuse= True):
+            # add regularization
+
+            if Config.cell_type=='gru':
+                loss += config.regularization * (tf.nn.l2_loss(tf.get_variable("W_r"))
+                                             + tf.nn.l2_loss(tf.get_variable("U_r"))
+                                             + tf.nn.l2_loss(tf.get_variable("W_z"))
+                                             + tf.nn.l2_loss(tf.get_variable("U_z"))
+                                             + tf.nn.l2_loss(tf.get_variable("W_o"))
+                                             + tf.nn.l2_loss(tf.get_variable("U_o")))
+        return loss
 
     def add_training_op(self, loss):
         train_op = tf.train.AdamOptimizer(Config.lr).minimize(loss)
         return train_op
 
-    def train_on_batch(self, sess, inputs_batch, batch_feat_mask, labels_batch, mask_batch):
+    def train_on_batch(self, sess, inputs_batch, batch_feat_mask, labels_batch, mask_batch):             #for train data
 
         feed = self.create_feed_dict(inputs_batch, batch_feat_mask, labels_batch=labels_batch, mask_batch=mask_batch,
                                      dropout=Config.dropout)
@@ -200,7 +227,7 @@ class RNNModel(AttributionModel):
 
         return loss
 
-    def predict_on_batch(self, sess, inputs_batch, batch_feat_mask, mask_batch):
+    def predict_on_batch(self, sess, inputs_batch, batch_feat_mask, mask_batch):         #for test data
        
         feed = self.create_feed_dict(inputs_batch, batch_feat_mask, mask_batch)
         predictions = sess.run(tf.nn.softmax(self.pred), feed_dict=feed)
@@ -219,6 +246,8 @@ class RNNModel(AttributionModel):
         f.write("\thidden_size: {}\n".format(Config.hidden_size))
         f.write("\tlearning_rate: {0:.4f}\n".format(Config.lr))
         f.write("\tregularization: {0:.5f}\n".format(Config.regularization))
+        f.write("\tdropout: {0:.5f}\n".format(Config.dropout))
+        f.write("\tn_epochs: {0:.5f}\n".format(Config.n_epochs))
         f.write("\tbatch_size: {}\n".format(Config.batch_size))
         f.write("\n")
         f.write("training history:\n")
@@ -270,11 +299,11 @@ class RNNModel(AttributionModel):
 
     def process_model_output(self):
 
-        pkl_file = open('/content/auth_id/data_sentence_index_test.pkl', 'rb')
+        pkl_file = open('/content/auth_id/data_sentence_index_test.pkl', 'rb') #changed filename from data_sentence_index_test to data_sentence to load train data
         batch_list = pickle.load(pkl_file)
         pkl_file.close()
 
-        test_size = int(len(batch_list) / 10)
+        test_size = int(len(batch_list) / 1)  #chnaged division by 10 to 1
         training_batch = batch_list[0 : len(batch_list) - test_size]
         print test_size, len(batch_list)
         testing_batch = batch_list[len(batch_list) - test_size : len(batch_list)]
@@ -284,7 +313,7 @@ class RNNModel(AttributionModel):
         with tf.Session() as session:
             session.run(init)
             #load_path = "results/RNN/20170318_221625/model.weights_10"
-            #saver.restore(session, load_path)
+            saver.restore(session, "./model_weights")
 
             print "Now, collecting the model outputs..."
             total = 0
@@ -308,7 +337,7 @@ class RNNModel(AttributionModel):
             x = t_cm.as_matrix().astype(np.uint8)
             print x
             du.visualize_cm(x, "gutenberg_sentence")
-            return accu
+            return accu        
 
     def train_model(self):
         # modify txt name from here
@@ -316,8 +345,7 @@ class RNNModel(AttributionModel):
         dataset='c50'
         parameter='hs'
         date='0319'
-        training_history_txt_filename='results/lstm'+level+'_'+parameter+'_'+dataset+'_'+date  +'.txt'
-
+        training_history_txt_filename='/content/auth_id/results/lstm'+level+'_'+parameter+'_'+dataset+'_'+date  +'.txt'
 
         if not os.path.exists(config.log_output):
             os.makedirs(os.path.dirname(config.log_output))
@@ -326,7 +354,7 @@ class RNNModel(AttributionModel):
         handler.setFormatter(logging.Formatter('%(message)s'))
         logging.getLogger().addHandler(handler)
 
-        pkl_file = open('/content/auth_id/data_sentence_index_test.pkl', 'rb')
+        pkl_file = open('/content/auth_id/data_sentence_index_train.pkl', 'rb')
         batch_list = pickle.load(pkl_file)
         pkl_file.close()
 
@@ -346,9 +374,7 @@ class RNNModel(AttributionModel):
         saver = tf.train.Saver()
         with tf.Session() as session:
             session.run(init)
-            #load_path = "results/RNN/20170310_1022/model.weights_20"
-            #saver.restore(session, load_path)
-
+          
             #the following is a test for what in tensor
             batch = training_batch[0]
             batch_label = rmb.convertOnehotLabel(batch[0],  Config.n_classes)
@@ -389,14 +415,14 @@ class RNNModel(AttributionModel):
 
                 if(iterTime % 10 == 0):
                     logger.info(("epoch %d : loss : %f" %(iterTime, np.mean(np.mean(np.array(loss)))) ))
-                    saver.save(session, self.config.model_output + "_%d"%(iterTime))
+                    saver.save(session, "./model_weights") #changed path name to model_weights
 
                     #if(smallIter % 200 == 0):
                     print ("Intermediate epoch %d : loss : %f" %(iterTime, np.mean(np.mean(np.array(loss)))) )
 
             print ("epoch %d : loss : %f" %(iterTime, np.mean(np.mean(np.array(loss)))) )
 
-            self.record_history_finish(training_history_file)
+            self.record_history_finish(training_history_file)   #all logging on output screen in thru this function. Process model output only generates the confusion matrix
 
 
 
@@ -415,7 +441,7 @@ class RNNModel(AttributionModel):
 
 
 if __name__ == "__main__":
-    args = "gru"
+    args = "lstm"
     config = Config(args)
     glove_path = "/content/glove.6B.50d.txt"
     glove_vector = data_util.load_embeddings(glove_path, config.embed_size)
