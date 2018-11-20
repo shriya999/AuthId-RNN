@@ -49,7 +49,7 @@ class Config:
     hidden_size = 300
     batch_size = 64
 
-    n_epochs = 35
+    n_epochs = 10
     regularization = 0
 
     max_grad_norm = 10.0 # max gradients norm for clipping
@@ -229,7 +229,7 @@ class RNNModel(AttributionModel):
         accu = accuCount * 1.0 / total
         logger.info( ("Test accuracy on training set is: %f" %(accu)) )
         return accu     
-
+      
     def process_model_output(self):
         pkl_file = open('/content/auth_id/data_article_test.pkl', 'rb')
         batch_list = pickle.load(pkl_file)
@@ -390,6 +390,7 @@ class RNNModel(AttributionModel):
 
             print ("epoch %d : loss : %f" %(iterTime, np.mean(np.mean(np.array(loss)))) )
             self.record_history_finish(training_history_file)
+
            
     def __init__(self, config, pretrained_embeddings, report=None):
         super(RNNModel, self).__init__(config)
@@ -410,4 +411,4 @@ if __name__ == "__main__":
     model = RNNModel(config, glove_vector.astype(np.float32))
     model.train_model()
     model.process_model_output()
-    model.process_model_confusion_matrix()
+    #model.process_model_confusion_matrix()
