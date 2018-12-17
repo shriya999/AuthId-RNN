@@ -1,4 +1,4 @@
-# RNN average model
+# RNN average model   for sentence level case
 
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
