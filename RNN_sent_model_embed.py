@@ -1,4 +1,4 @@
-#RNN_sent_model_embed.py  for gru
+#RNN_sent_model_embed.py  for gru  for article level case
 
 
 #!/usr/bin/env python3
