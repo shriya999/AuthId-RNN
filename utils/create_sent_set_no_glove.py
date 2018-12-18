@@ -16,10 +16,9 @@ batch_size = 16
 max_sent_num = 15
 max_sent_length = 15
 
-cwd = os.getcwd()
-data_path = cwd + '/../dataset/bbc'
+data_path = '/content/bbc'
 
-with open('../../data/glove/tokenToIndex', 'r') as f:
+with open('/content/auth_id/tokenToIndex', 'r') as f:
     try:
         wordToIndex = json.load(f)
     # if the file is empty the ValueError will be thrown
@@ -41,7 +40,7 @@ batch_list = rmb.process_word2num_noglove(raw_data, wordToIndex, max_sent_num, m
 
 batch_list_bundle = rmb.pack_batch_list(batch_list, batch_size)
 
-output = open('../../data/batch_data/bbc/data_sentence_index.pkl', 'wb')
+output = open('/content/auth_id/data_sentence_index.pkl', 'wb')
 pickle.dump(batch_list_bundle, output, -1)
 output.close()
 
