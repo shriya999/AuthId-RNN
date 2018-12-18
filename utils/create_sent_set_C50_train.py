@@ -40,7 +40,7 @@ batch_list = rmb.process_word2num_noglove(raw_data, wordToIndex, max_sent_num, m
 
 batch_list_bundle = rmb.pack_batch_list(batch_list, batch_size)
 
-output = open('/content/auth_id/data_sentence_index_train.pkl', 'wb')
+output = open('/content/auth_id/data_sentence_index.pkl', 'wb')
 pickle.dump(batch_list_bundle, output, -1)
 output.close()
 
